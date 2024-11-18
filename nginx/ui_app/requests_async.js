@@ -8,15 +8,13 @@ async function sendPostRequest() {
         alert("Please fill in all required fields and agree to the privacy policy.");
         return;
     }
-
     const data = {
         first_name: firstName,
         last_name: lastName,
         role: role
     };
-
     try {
-        const response = await fetch("http://localhost:8000/team", {
+        const response = await fetch("http://localhost:8000", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -27,7 +25,7 @@ async function sendPostRequest() {
         if (response.ok) {
             const responseData = await response.json();
             console.log("Team member added:", responseData);
-            updateTeamList(responseData.team_members);
+            updateTeamList(responseData.users);
         } else {
             console.error('Failed to add member:', response.statusText);
         }
@@ -36,12 +34,11 @@ async function sendPostRequest() {
     }
 }
 
-function updateTeamList(teamMembers) {
+async function updateTeamList(teamMembers) {
     const teamList = document.getElementById("teamList");
     teamList.innerHTML = '';
 
     teamMembers.forEach(member => {
-
         const listItem = document.createElement("li");
         listItem.innerHTML = `${member.first_name} ${member.last_name}<br>${member.role}`;
         const trashIcon = document.createElement("span");
@@ -50,18 +47,17 @@ function updateTeamList(teamMembers) {
 
         trashIcon.onclick = async function () {
             try {
-                const response = await fetch(`http://localhost:8000/team/${member.id}`, {
+                const response = await fetch(`http://localhost:8000/${member.id}`, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json"
                     }
                 });
                 if (response.ok) {
-                    const responseData = await response.json();
-                    console.log("Team member deleted:", responseData);
-                    updateTeamList(responseData.team_members);
+                    console.log("User deleted:", member);
+                    updateTeamList(await fetchTeamMembers());
                 } else {
-                    console.error('Failed to delete member:', response.statusText);
+                    console.error('Failed to delete user:', response.statusText);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -72,13 +68,26 @@ function updateTeamList(teamMembers) {
         teamList.appendChild(listItem);
     });
 }
+async function fetchTeamMembers() {
+    try {
+        const response = await fetch("http://localhost:8000");
+        if (response.ok) {
+            const data = await response.json();
+            return data.users;
+        } else {
+            console.error("Failed to fetch team members:", response.statusText);
+        }
+    } catch (error) {
+        console.error("Error fetching team members:", error);
+    }
+}
 
 window.addEventListener('load', async function () {
-    try {
-        const response = await fetch("http://localhost:8000/team");
-        const data = await response.json();
-        updateTeamList(data.team_members);
-    } catch (error) {
-        console.error('Error:', error);
+    const teamMembers = await fetchTeamMembers();
+    if (teamMembers) {
+        updateTeamList(teamMembers);
+    } else {
+        console.error("Failed to fetch team members");
     }
 });
+
